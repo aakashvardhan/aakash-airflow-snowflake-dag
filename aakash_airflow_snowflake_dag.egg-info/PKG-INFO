@@ -1,0 +1,7 @@
+Metadata-Version: 2.4
+Name: aakash-airflow-snowflake-dag
+Version: 0.1.0
+Summary: Add your description here
+Requires-Python: >=3.11
+Requires-Dist: apache-airflow-providers-snowflake>=6.5.4
+Requires-Dist: snowflake-connector-python>=3.17.4
