@@ -27,16 +27,26 @@
 
 ## Project Overview
 
-This project implements an end-to-end ETL (Extract, Transform, Load) pipeline using **Apache Airflow**, **Alpha Vantage Stock API**, and **Snowflake**.  
-The goal is to automate the extraction of stock market data from Alpha Vantage, transform it into a structured format, and load it into Snowflake for analytical use.
+The goal of this project is to automate the extraction of stock market data from Alpha Vantage, transform it into a structured format, and load it into Snowflake for analytical use.
 
 The pipeline is orchestrated through an Airflow DAG built using the `@task` decorator for modular task design.  
 Each task handles a distinct stage of the pipeline — data extraction from the API, transformation, and loading into Snowflake — with proper task dependencies ensuring reliable scheduling and execution.
 
-Key components:
+## Architecture and Technologies
 
-- **Alpha Vantage API** – Source of real-time and historical stock data.
-- **Airflow Variables** – Used to securely store and retrieve the API key and other configurations.
-- **Snowflake Connection** – Configured in Airflow to manage database interactions for data loading.
-- **SQL Transactions** – Used to implement a full refresh mechanism for data consistency.
-- **Airflow Web UI** – Provides DAG visualization, monitoring, and log tracking.
+The ETL pipeline follows a modular architecture with Airflow as the orchestration layer.  
+Data flows from **Alpha Vantage API → Airflow Tasks → Snowflake Data Warehouse**.
+
+**Core Technologies:**
+
+- **Apache Airflow:** Workflow orchestration, task scheduling, and dependency management.
+- **Alpha Vantage API:** Provides stock market data (JSON/CSV) via REST API.
+- **Snowflake:** Cloud-based data warehouse for structured data storage and analytics.
+- **Python:** Core language for task logic and data transformation.
+- **Airflow Variables & Connections:** Securely manage credentials (API key, Snowflake credentials).
+
+**Data Flow Summary:**
+
+1. Extract stock data from Alpha Vantage using API requests.
+2. Transform and clean the dataset within Airflow tasks.
+3. Load the processed data into a Snowflake table using a transactional full refresh.
