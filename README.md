@@ -85,3 +85,93 @@ api_key = Variable.get("alpha_vantage_api")
 ### Admin Variables Screenshot
 
 ![Image](https://raw.githubusercontent.com/aakashvardhan/aakash-airflow-snowflake-dag/main/screenshots/list-variable-airflow.png)
+
+## Snowflake Connection Setup
+
+### Creating Snowflake Connections in Airflow
+
+1. Go to Admin -> Connections in Airflow.
+2. Create a new connection:
+   - **Conn ID**: `my_snowflake_conn`
+   - **Conn Type**: Snowflake
+   - **Account, User, Password, Warehouse, Database, Schema** -> fill as per your setup
+
+### Using the Connection in the DAG
+
+```python
+from airflow.providers.snowflake.hooks.snowflake import SnowflakeHook
+hook = SnowflakeHook(snowflake_conn_id="my_snowflake_conn")
+```
+
+### Connection Details Screenshot
+
+![image](https://raw.githubusercontent.com/aakashvardhan/aakash-airflow-snowflake-dag/main/screenshots/connection-credential.png)
+
+## Airflow DAG Implementation
+
+### DAG Overview
+
+The DAG (Directed Acyclic Graph) is designed for clarity, modularity, and fault tolerance. Each step is represented as a task function with clear dependencies.
+
+### Tasks using `@task` Decorator
+
+```python
+from airflow.decorators import task
+
+@task
+def extract_90_days_stock_data(symbol: str):
+    # Fetch 90 days of stock data from Alpha Vantage
+    ...
+
+@task
+def transform(price_list, symbol):
+    # Transform the data structure from dict to list of lists
+    ...
+
+@task
+def load_v2(records, symbol):
+    # Insert into Snowflake using connection
+    # Implement Full Refresh Transaction
+    ...
+```
+
+### Tasks Dependencies and Scheduling
+
+Tasks are linked in the DAG definition:
+
+```python
+extract_90_days_stock_data() >> transform() >> load_v2()
+```
+
+## Full Refresh with SQL Transaction
+
+Load = "Full Refresh" via transaction
+
+- `load_v2(records, symbol)` (Airflow `@task`) opens a Snowflake cursor and wraps everything in a transaction:
+  - `BEGIN;`
+  - `CREATE OR REPLACE TABLE {DATABASE}.RAW.{symbol}_stock_price (...) PRIMARY KEY (symbol, date)`
+    - `OR REPLACE` drops/recreates the table atomically, which is the foundation of full refresh (where old data is being replaced).
+  - Iterates `records` and executes `INSERT` per row.
+  - `COMMIT;` on success; `ROLLBACK;` on any error; cursor closed in `finally`
+
+## Execution and Validation
+
+### Airflow Homepage Screenshot
+
+![image](https://raw.githubusercontent.com/aakashvardhan/aakash-airflow-snowflake-dag/main/screenshots/triggered-dag.png)
+
+### DAG Log Screenshot
+
+#### DAG Graph
+
+![image](https://raw.githubusercontent.com/aakashvardhan/aakash-airflow-snowflake-dag/main/screenshots/airflow-dag-graph.png)
+
+#### Event Logs
+
+![image](https://raw.githubusercontent.com/aakashvardhan/aakash-airflow-snowflake-dag/main/screenshots/event-log.png)
+
+## References and Resources
+
+- [Alpha Vantage API Documentation](https://www.alphavantage.co/documentation/)
+- [Apache Airflow Documentation](https://airflow.apache.org/docs/)
+- [Snowflake Documentation](https://docs.snowflake.com/)
