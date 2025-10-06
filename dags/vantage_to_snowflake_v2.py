@@ -136,7 +136,7 @@ with DAG(
     start_date=datetime(2025, 1, 1),
     catchup=False,
     tags=["ETL"],
-    schedule="30 2 * * *",
+    schedule=None,
 ) as dag:
 
     symbols = "TSLA"
@@ -144,6 +144,4 @@ with DAG(
 
     extracted_data_2 = extract_90_days_stock_data(symbols)
     transformed_data_2 = transform(extracted_data_2, symbols)
-    loaded = load_v2(transformed_data_2, symbols)
-    check_table = check_table_stats(target_table)
-    loaded >> check_table
+    load_v2(transformed_data_2, symbols)

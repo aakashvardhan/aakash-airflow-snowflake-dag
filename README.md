@@ -1,30 +1,5 @@
 # ETL Pipeline for Alpha Vantage Stock Data with Snowflake and Apache Airflow
 
-## Table of Contents
-
-1. [Project Overview](#project-overview)
-2. [Architecture and Technologies](#architecture-and-technologies)
-3. [Setup Instructions](#setup-instructions)
-   - [Environment Setup](#environment-setup)
-   - [Installing Dependencies](#installing-dependencies)
-4. [Alpha Vantage API Configuration](#alpha-vantage-api-configuration)
-   - [Setting Airflow Variable for API Key](#setting-airflow-variable-for-api-key)
-   - [Using the Variable in Code](#using-the-variable-in-code)
-   - [Admin Variables Screenshot (①)](#admin-variables-screenshot-①)
-5. [Snowflake Connection Setup](#snowflake-connection-setup)
-   - [Creating Snowflake Connection in Airflow](#creating-snowflake-connection-in-airflow)
-   - [Using the Connection in the DAG](#using-the-connection-in-the-dag)
-   - [Connection Details Screenshot (②)](#connection-details-screenshot-②)
-6. [Airflow DAG Implementation](#airflow-dag-implementation)
-   - [DAG Overview](#dag-overview)
-   - [Tasks Using `@task` Decorator](#tasks-using-task-decorator)
-   - [Task Dependencies and Scheduling](#task-dependencies-and-scheduling)
-7. [Full Refresh with SQL Transaction](#full-refresh-with-sql-transaction)
-8. [Execution and Validation](#execution-and-validation)
-   - [Airflow Homepage Screenshot (③)](#airflow-homepage-screenshot-③)
-   - [DAG Log Screenshot (④)](#dag-log-screenshot-④)
-9. [Results and Observations](#results-and-observations)
-
 ## Project Overview
 
 The goal of this project is to automate the extraction of stock market data from Alpha Vantage, transform it into a structured format, and load it into Snowflake for analytical use.
@@ -50,3 +25,52 @@ Data flows from **Alpha Vantage API → Airflow Tasks → Snowflake Data Warehou
 1. Extract stock data from Alpha Vantage using API requests.
 2. Transform and clean the dataset within Airflow tasks.
 3. Load the processed data into a Snowflake table using a transactional full refresh.
+
+## Setup Instruction
+
+### Environment Setup
+
+1. Install Python >= 3.9 and Apache Airflow via Docker Compose by the following command below:
+
+```bash
+docker compose -f ./docker-compose.yaml up airflow-init
+docker compose -f ./docker-compose.yaml up
+```
+
+#### Apache Airflow with Docker Compose
+
+This setup provides a local development environment for Apache Airflow using Docker Compose.
+It runs Airflow with **LocalExecutor, PostgreSQL**, and the Airflow webserver and scheduler.
+
+`docker compose up airflow-init`
+
+This command runs only the initialization container (`airflow-init`) to setup Airflow's environment before the main services start
+
+**What it does**
+
+- Waits for Postgres to start session
+- Checks Docker Resources (CPU, memory, disk).
+- Creates required folders and sets correct permissions:
+
+```bash
+./log # Airflow logs
+./dags # DAG Files
+./plugins # Custom Airflow plugins
+./config # Optional custom configs
+```
+
+- Runs Airflow initialization steps:
+  - Executes **database migrations**.
+  - Creates the default admin user:
+    - Username: `airflow`
+    - Password: `airflow`
+
+## Alpha Vantage API Configuration
+
+### Setting Airflow Variable for API Key
+
+1. In Airflow UI -> Admin -> Variables, create a variable:
+   - Key: `alpha_vantage_api`
+   - Value: your actual API Key [Go to https://www.alphavantage.co/]
+
+![Image]()
