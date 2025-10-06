@@ -28,10 +28,18 @@ def get_stock_data(symbol, api_key):
         "function": "TIME_SERIES_DAILY",
         "symbol": symbol,
         "apikey": api_key,
-        "outputsize": 90,
+        "outputsize": "compact",
     }
-    response = requests.get(base_url, params=params)
+    response = requests.get(base_url, params=params, timeout=30)
+    response.raise_for_status()
     data = response.json()
+    # get only last 90 days of data
+    if "Time Series (Daily)" not in data:
+        raise ValueError(f"Error fetching data for symbol {symbol}: {data}")
+    if len(data["Time Series (Daily)"]) > 90:
+        data["Time Series (Daily)"] = dict(
+            list(data["Time Series (Daily)"].items())[:90]
+        )
     return data
 
 
@@ -71,7 +79,6 @@ def transform(price_list, symbol):
 def load_v2(records, symbol):
     con = return_snowflake_hook()
 
-    staging_table = f"{DATABASE}.raw.temp_{symbol}_stock_price"
     target_table = f"{DATABASE}.raw.{symbol}_stock_price"
     try:
         con.execute("BEGIN;")
@@ -90,20 +97,6 @@ def load_v2(records, symbol):
                             PRIMARY KEY (symbol, date)
                     );"""
         )
-        con.execute(
-            f"""
-
-                    CREATE OR REPLACE TABLE {staging_table} (
-                        symbol VARCHAR(10),
-                        date DATE,
-                        open FLOAT,
-                        close FLOAT,
-                        high FLOAT,
-                        low FLOAT,
-                        volume FLOAT,
-                        PRIMARY KEY (symbol, date)
-                    );"""
-        )
         # load records
         for r in records:
             _symbol = r[0].replace("'", "''")
@@ -113,21 +106,6 @@ def load_v2(records, symbol):
             _high = r[4].replace("'", "''")
             _low = r[5].replace("'", "''")
             _volume = r[6].replace("'", "''")
-            print(
-                _symbol,
-                "-",
-                _date,
-                "-",
-                _open,
-                "-",
-                _close,
-                "-",
-                _high,
-                "-",
-                _low,
-                "-",
-                _volume,
-            )
 
             sql = f"""
                 INSERT INTO {target_table} (symbol, date, open, close, high, low, volume)
@@ -136,31 +114,21 @@ def load_v2(records, symbol):
             # print(sql)
             con.execute(sql)
         con.execute("COMMIT;")
-
-        # performing upsert -> incremental update
-        upsert_sql = f"""
-            -- Performing upsert
-            MERGE INTO {target_table} AS target
-            USING {staging_table} AS source
-            ON target.symbol = source.symbol AND target.date = source.date
-            WHEN MATCHED THEN
-                UPDATE SET
-                    target.symbol = source.symbol,
-                    target.date = source.date,
-                    target.open = source.open,
-                    target.close = source.close,
-                    target.high = source.high,
-                    target.low = source.low,
-                    target.volume = source.volume
-            WHEN NOT MATCHED THEN
-                INSERT (symbol, date, open, close, high, low, volume)
-                VALUES (source.symbol, source.date, source.open, source.close, source.high, source.low, source.volume);
-        """
-        con.execute(upsert_sql)
     except Exception as e:
         con.execute("ROLLBACK;")
         print(e)
         raise e
+    finally:
+        con.close()
+
+
+@task
+def check_table_stats(table):
+    conn = return_snowflake_hook()
+    conn.execute(f"SELECT * FROM {table} LIMIT 5;")
+    df = conn.fetch_pandas_all()
+    print(df.head())
+    print(len(df))
 
 
 with DAG(
@@ -171,8 +139,11 @@ with DAG(
     schedule="30 2 * * *",
 ) as dag:
 
-    symbols = "AAPL"
+    symbols = "TSLA"
+    target_table = f"{DATABASE}.raw.{symbols}_stock_price"
 
-    extracted_data = extract_90_days_stock_data(symbols)
-    transformed_data = transform(extracted_data, symbols)
-    load_v2(transformed_data, symbols)
+    extracted_data_2 = extract_90_days_stock_data(symbols)
+    transformed_data_2 = transform(extracted_data_2, symbols)
+    loaded = load_v2(transformed_data_2, symbols)
+    check_table = check_table_stats(target_table)
+    loaded >> check_table
