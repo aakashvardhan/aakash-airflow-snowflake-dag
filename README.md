@@ -107,6 +107,8 @@ hook = SnowflakeHook(snowflake_conn_id="my_snowflake_conn")
 
 ![image](https://raw.githubusercontent.com/aakashvardhan/aakash-airflow-snowflake-dag/main/screenshots/connection-credential.png)
 
+![image](https://raw.githubusercontent.com/aakashvardhan/aakash-airflow-snowflake-dag/main/screenshots/connection-settings.png)
+
 ## Airflow DAG Implementation
 
 ### DAG Overview
