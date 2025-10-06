@@ -73,4 +73,4 @@ This command runs only the initialization container (`airflow-init`) to setup Ai
    - Key: `alpha_vantage_api`
    - Value: your actual API Key [Go to https://www.alphavantage.co/]
 
-![Image]()
+![Image](https://raw.githubusercontent.com/aakashvardhan/aakash-airflow-snowflake-dag/main/screenshots/list-variable-airflow.png)
